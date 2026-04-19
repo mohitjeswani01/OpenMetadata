@@ -189,6 +189,8 @@ test.describe('Advanced Search Custom Property', () => {
  *      contains `"gte":50` and `"lte":60`.
  *   4. Applying `not_between 1 and 5` and asserting the payload contains
  *      `"must_not"` wrapping the same range structure.
+ *   5. Applying `between 100 and 200` (value 55.7 is outside) and asserting
+ *      the entity is NOT visible in the results.
  */
 test.describe(
   'Advanced Search – number custom property between operator (Issue #27482)',
@@ -199,14 +201,14 @@ test.describe(
     // CP_BASE_VALUES.number  = 55.7  → falls inside [50, 60]
     const assignedValue = 55.7;
 
-    test.beforeAll('Setup: create table and number custom property', async ({
-      browser,
-    }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await table.create(apiContext);
-      await afterAction();
-    });
-
+    test.beforeAll(
+      'Setup: create table and number custom property',
+      async ({ browser }) => {
+        const { apiContext, afterAction } = await createNewPage(browser);
+        await table.create(apiContext);
+        await afterAction();
+      }
+    );
 
     test(
       'between operator sends gte/lte bounds in the ES query_filter',
@@ -353,5 +355,3 @@ test.describe(
     );
   }
 );
-
-
