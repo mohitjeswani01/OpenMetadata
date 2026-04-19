@@ -249,9 +249,6 @@ test.describe(
               propertyType: 'number',
               endpoint: EntityTypeEndpoint.Table,
             });
-
-            // eslint-disable-next-line playwright/no-wait-for-timeout -- allow Elasticsearch to index the new extension value
-            await page.waitForTimeout(5000);
           }
         );
 
