@@ -201,14 +201,11 @@ test.describe(
     // CP_BASE_VALUES.number  = 55.7  → falls inside [50, 60]
     const assignedValue = 55.7;
 
-    test.beforeAll(
-      'Setup: create table and number custom property',
-      async ({ browser }) => {
-        const { apiContext, afterAction } = await createNewPage(browser);
-        await table.create(apiContext);
-        await afterAction();
-      }
-    );
+    test.beforeAll('Setup: create table', async ({ browser }) => {
+      const { apiContext, afterAction } = await createNewPage(browser);
+      await table.create(apiContext);
+      await afterAction();
+    });
 
     test(
       'between operator sends gte/lte bounds in the ES query_filter',
