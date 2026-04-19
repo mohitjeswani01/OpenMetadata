@@ -18,18 +18,18 @@ import { elasticSearchFormat } from './QueryBuilderElasticsearchFormatUtils';
 // elasticSearchFormat only calls .get() on the tree and its properties map.
 const makeTree = (operator, value) => ({
   get(key) {
-    if (key === 'type') return 'rule';
+    if (key === 'type') {return 'rule';}
     if (key === 'properties')
-      return {
+      {return {
         get(k) {
-          if (k === 'field') return 'extension.table.myNumber';
-          if (k === 'operator') return operator;
-          if (k === 'value') return { toJS: () => value };
-          if (k === 'valueSrc') return { get: () => 'value' };
+          if (k === 'field') {return 'extension.table.myNumber';}
+          if (k === 'operator') {return operator;}
+          if (k === 'value') {return { toJS: () => value };}
+          if (k === 'valueSrc') {return { get: () => 'value' };}
 
           return undefined;
         },
-      };
+      };}
 
     return undefined;
   },

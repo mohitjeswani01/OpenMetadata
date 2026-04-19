@@ -823,11 +823,7 @@ function buildEsRule(fieldName, value, operator, config, valueSrc) {
     // a proper gte/lte range query. For every other operator a single scalar
     // is expected, so extract value[0] as before.
     const isBetweenOp = op === 'between' || op === 'not_between';
-    const extensionValue = hasValue
-      ? isBetweenOp
-        ? value
-        : value[0]
-      : null;
+    const extensionValue = hasValue ? (isBetweenOp ? value : value[0]) : null;
 
     return buildExtensionQuery(
       extensionPropertyName,
