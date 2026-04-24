@@ -54,7 +54,7 @@ test.describe('Advanced Search Custom Property', () => {
     await afterAction();
   });
 
-  test('Create, Assign and Test Advance Search for Duration', async ({
+  test('Create, Assign and Test Advanced Search for Duration', async ({
     page,
   }) => {
     test.slow(true);
