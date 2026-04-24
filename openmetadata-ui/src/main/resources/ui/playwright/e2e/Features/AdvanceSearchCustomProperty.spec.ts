@@ -205,8 +205,10 @@ test.describe('Advanced Search – number custom property between operator (Issu
     await afterAction();
   });
 
-  test('between operator sends gte/lte bounds in the ES query_filter', // #27482 – upper bound was dropped before fix
-  async ({ page }) => {
+  // #27482 – upper bound was dropped before fix
+  test('between operator sends gte/lte bounds in the ES query_filter', async ({
+    page,
+  }) => {
     test.slow(true);
 
     await redirectToHomePage(page);
