@@ -1,5 +1,5 @@
 /*
- *  Copyright 2025 Collate.
+ *  Copyright 2026 Collate.
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
@@ -192,160 +192,142 @@ test.describe('Advanced Search Custom Property', () => {
  *   5. Applying `between 100 and 200` (value 55.7 is outside) and asserting
  *      the entity is NOT visible in the results.
  */
-test.describe(
-  'Advanced Search – number custom property between operator (Issue #27482)',
-  () => {
-    const table = new TableClass();
-    const numberPropertyName = `pwNumberBetweenTest${uuid()}`;
-    // CP_RANGE_VALUES.number = { start: 50, end: 60 }
-    // CP_BASE_VALUES.number  = 55.7  → falls inside [50, 60]
-    const assignedValue = 55.7;
+test.describe('Advanced Search – number custom property between operator (Issue #27482)', () => {
+  const table = new TableClass();
+  const numberPropertyName = `pwNumberBetweenTest${uuid()}`;
+  // CP_RANGE_VALUES.number = { start: 50, end: 60 }
+  // CP_BASE_VALUES.number  = 55.7  → falls inside [50, 60]
+  const assignedValue = 55.7;
 
-    test.beforeAll('Setup: create table', async ({ browser }) => {
-      const { apiContext, afterAction } = await createNewPage(browser);
-      await table.create(apiContext);
-      await afterAction();
+  test.beforeAll('Setup: create table', async ({ browser }) => {
+    const { apiContext, afterAction } = await createNewPage(browser);
+    await table.create(apiContext);
+    await afterAction();
+  });
+
+  test('between operator sends gte/lte bounds in the ES query_filter', // #27482 – upper bound was dropped before fix
+  async ({ page }) => {
+    test.slow(true);
+
+    await redirectToHomePage(page);
+
+    await test.step('Create number custom property and assign value', async () => {
+      await settingClick(page, GlobalSettingOptions.TABLES, true);
+
+      await addCustomPropertiesForEntity({
+        page,
+        propertyName: numberPropertyName,
+        customPropertyData: CUSTOM_PROPERTIES_ENTITIES['entity_table'],
+        customType: 'Number',
+      });
+
+      await table.visitEntityPage(page);
+
+      const customPropertyResponse = page.waitForResponse(
+        '/api/v1/metadata/types/name/table?fields=customProperties'
+      );
+      await page.getByTestId('custom_properties').click();
+      await customPropertyResponse;
+
+      await page.locator('.ant-skeleton-active').first().waitFor({
+        state: 'detached',
+      });
+
+      await setValueForProperty({
+        page,
+        propertyName: numberPropertyName,
+        value: String(assignedValue),
+        propertyType: 'number',
+        endpoint: EntityTypeEndpoint.Table,
+      });
     });
 
-    test(
-      'between operator sends gte/lte bounds in the ES query_filter',
-      // #27482 – upper bound was dropped before fix
-      async ({ page }) => {
-        test.slow(true);
+    await test.step('between [50, 60]: query_filter must contain gte:50 and lte:60', async () => {
+      await sidebarClick(page, SidebarItem.EXPLORE);
+      await showAdvancedSearchDialog(page);
 
-        await redirectToHomePage(page);
+      await applyCustomPropertyFilter(
+        page,
+        numberPropertyName,
+        'between',
+        CP_RANGE_VALUES.number, // { start: 50, end: 60 }
+        'Table'
+      );
 
-        await test.step(
-          'Create number custom property and assign value',
-          async () => {
-            await settingClick(page, GlobalSettingOptions.TABLES, true);
+      // Intercept the search request and assert both bounds are present
+      const searchResponse = page.waitForResponse(
+        '/api/v1/search/query?*index=dataAsset*'
+      );
+      await page.getByTestId('apply-btn').click();
+      const res = await searchResponse;
 
-            await addCustomPropertiesForEntity({
-              page,
-              propertyName: numberPropertyName,
-              customPropertyData: CUSTOM_PROPERTIES_ENTITIES['entity_table'],
-              customType: 'Number',
-            });
+      const url = res.request().url();
+      const params = new URLSearchParams(url.split('?')[1]);
+      const queryFilter = JSON.parse(params.get('query_filter') ?? '{}');
+      const queryFilterStr = JSON.stringify(queryFilter);
 
-            await table.visitEntityPage(page);
+      // Core regression assertion: both bounds must survive to the request
+      expect(queryFilterStr).toContain('"gte":50');
+      expect(queryFilterStr).toContain('"lte":60');
 
-            const customPropertyResponse = page.waitForResponse(
-              '/api/v1/metadata/types/name/table?fields=customProperties'
-            );
-            await page.getByTestId('custom_properties').click();
-            await customPropertyResponse;
+      await clearAdvancedSearchFilters(page);
+    });
 
-            await page.locator('.ant-skeleton-active').first().waitFor({
-              state: 'detached',
-            });
+    await test.step('not_between [1, 5]: query_filter must contain must_not with gte:1 and lte:5', async () => {
+      await sidebarClick(page, SidebarItem.EXPLORE);
+      await showAdvancedSearchDialog(page);
 
-            await setValueForProperty({
-              page,
-              propertyName: numberPropertyName,
-              value: String(assignedValue),
-              propertyType: 'number',
-              endpoint: EntityTypeEndpoint.Table,
-            });
-          }
-        );
+      await applyCustomPropertyFilter(
+        page,
+        numberPropertyName,
+        'not_between',
+        { start: 1, end: 5 },
+        'Table'
+      );
 
-        await test.step(
-          'between [50, 60]: query_filter must contain gte:50 and lte:60',
-          async () => {
-            await sidebarClick(page, SidebarItem.EXPLORE);
-            await showAdvancedSearchDialog(page);
+      const searchResponse = page.waitForResponse(
+        '/api/v1/search/query?*index=dataAsset*'
+      );
+      await page.getByTestId('apply-btn').click();
+      const res = await searchResponse;
 
-            await applyCustomPropertyFilter(
-              page,
-              numberPropertyName,
-              'between',
-              CP_RANGE_VALUES.number, // { start: 50, end: 60 }
-              'Table'
-            );
+      const url = res.request().url();
+      const params = new URLSearchParams(url.split('?')[1]);
+      const queryFilter = JSON.parse(params.get('query_filter') ?? '{}');
+      const queryFilterStr = JSON.stringify(queryFilter);
 
-            // Intercept the search request and assert both bounds are present
-            const searchResponse = page.waitForResponse(
-              '/api/v1/search/query?*index=dataAsset*'
-            );
-            await page.getByTestId('apply-btn').click();
-            const res = await searchResponse;
+      expect(queryFilterStr).toContain('"must_not"');
+      expect(queryFilterStr).toContain('"gte":1');
+      expect(queryFilterStr).toContain('"lte":5');
 
-            const url = res.request().url();
-            const params = new URLSearchParams(url.split('?')[1]);
-            const queryFilter = JSON.parse(params.get('query_filter') ?? '{}');
-            const queryFilterStr = JSON.stringify(queryFilter);
+      await clearAdvancedSearchFilters(page);
+    });
 
-            // Core regression assertion: both bounds must survive to the request
-            expect(queryFilterStr).toContain('"gte":50');
-            expect(queryFilterStr).toContain('"lte":60');
+    await test.step('between [100, 200]: entity with value 55.7 should NOT be visible in results', async () => {
+      await sidebarClick(page, SidebarItem.EXPLORE);
+      await showAdvancedSearchDialog(page);
 
-            await clearAdvancedSearchFilters(page);
-          }
-        );
+      await applyCustomPropertyFilter(
+        page,
+        numberPropertyName,
+        'between',
+        { start: 100, end: 200 },
+        'Table'
+      );
 
-        await test.step(
-          'not_between [1, 5]: query_filter must contain must_not with gte:1 and lte:5',
-          async () => {
-            await sidebarClick(page, SidebarItem.EXPLORE);
-            await showAdvancedSearchDialog(page);
+      const searchResponse = page.waitForResponse(
+        '/api/v1/search/query?*index=dataAsset*'
+      );
+      await page.getByTestId('apply-btn').click();
+      await searchResponse;
 
-            await applyCustomPropertyFilter(
-              page,
-              numberPropertyName,
-              'not_between',
-              { start: 1, end: 5 },
-              'Table'
-            );
+      await expect(
+        page.getByTestId(
+          `table-data-card_${table.entityResponseData.fullyQualifiedName}`
+        )
+      ).not.toBeVisible();
 
-            const searchResponse = page.waitForResponse(
-              '/api/v1/search/query?*index=dataAsset*'
-            );
-            await page.getByTestId('apply-btn').click();
-            const res = await searchResponse;
-
-            const url = res.request().url();
-            const params = new URLSearchParams(url.split('?')[1]);
-            const queryFilter = JSON.parse(params.get('query_filter') ?? '{}');
-            const queryFilterStr = JSON.stringify(queryFilter);
-
-            expect(queryFilterStr).toContain('"must_not"');
-            expect(queryFilterStr).toContain('"gte":1');
-            expect(queryFilterStr).toContain('"lte":5');
-
-            await clearAdvancedSearchFilters(page);
-          }
-        );
-
-        await test.step(
-          'between [100, 200]: entity with value 55.7 should NOT be visible in results',
-          async () => {
-            await sidebarClick(page, SidebarItem.EXPLORE);
-            await showAdvancedSearchDialog(page);
-
-            await applyCustomPropertyFilter(
-              page,
-              numberPropertyName,
-              'between',
-              { start: 100, end: 200 },
-              'Table'
-            );
-
-            const searchResponse = page.waitForResponse(
-              '/api/v1/search/query?*index=dataAsset*'
-            );
-            await page.getByTestId('apply-btn').click();
-            await searchResponse;
-
-            await expect(
-              page.getByTestId(
-                `table-data-card_${table.entityResponseData.fullyQualifiedName}`
-              )
-            ).not.toBeVisible();
-
-            await clearAdvancedSearchFilters(page);
-          }
-        );
-      }
-    );
-  }
-);
+      await clearAdvancedSearchFilters(page);
+    });
+  });
+});
