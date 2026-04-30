@@ -38,19 +38,14 @@ import { settingClick, sidebarClick } from '../../utils/sidebar';
 test.use({ storageState: 'playwright/.auth/admin.json' });
 
 test.describe('Advanced Search Custom Property', () => {
-  const table = new TableClass();
+  let table: TableClass;
   const durationPropertyName = `pwCustomPropertyDurationTest${uuid()}`;
   const durationPropertyValue = 'PT1H30M';
 
   test.beforeAll('Setup pre-requests', async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
+    table = new TableClass();
     await table.create(apiContext);
-    await afterAction();
-  });
-
-  test.afterAll('Cleanup', async ({ browser }) => {
-    const { apiContext, afterAction } = await createNewPage(browser);
-    await table.delete(apiContext);
     await afterAction();
   });
 
@@ -193,7 +188,7 @@ test.describe('Advanced Search Custom Property', () => {
  *      the entity is NOT visible in the results.
  */
 test.describe('Advanced Search – number custom property between operator (Issue #27482)', () => {
-  const table = new TableClass();
+  let table: TableClass;
   const numberPropertyName = `pwNumberBetweenTest${uuid()}`;
   // CP_RANGE_VALUES.number = { start: 50, end: 60 }
   // CP_BASE_VALUES.number  = 55.7  → falls inside [50, 60]
@@ -201,6 +196,7 @@ test.describe('Advanced Search – number custom property between operator (Issu
 
   test.beforeAll('Setup: create table', async ({ browser }) => {
     const { apiContext, afterAction } = await createNewPage(browser);
+    table = new TableClass();
     await table.create(apiContext);
     await afterAction();
   });
