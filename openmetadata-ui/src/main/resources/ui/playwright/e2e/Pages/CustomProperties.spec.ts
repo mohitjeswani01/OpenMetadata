@@ -1013,6 +1013,12 @@ ALL_ENTITIES.forEach(({ key, makeInstance }) => {
           expect(queryFilterStr).toContain('"gte":50');
           expect(queryFilterStr).toContain('"lte":60');
 
+          await expect(
+            page.getByTestId(
+              `table-data-card_${responseData.fullyQualifiedName ?? ''}`
+            )
+          ).toBeVisible();
+
           await clearAdvancedSearchFilters(page);
         });
 
@@ -1071,6 +1077,15 @@ ALL_ENTITIES.forEach(({ key, makeInstance }) => {
           ).not.toBeVisible();
 
           await clearAdvancedSearchFilters(page);
+        });
+
+        await test.step('Cleanup', async () => {
+          await settingClick(
+            page,
+            entity.entityApiType as SettingOptionsType,
+            true
+          );
+          await deleteCreatedProperty(page, numberPropertyName);
         });
       });
 
