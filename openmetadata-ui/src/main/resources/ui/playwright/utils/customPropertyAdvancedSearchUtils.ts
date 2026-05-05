@@ -334,6 +334,19 @@ export const setupCustomPropertyAdvancedSearchTest = async (
     }
   );
 
+  // Wait for the custom properties to be indexed in Elasticsearch
+  const cpName = Object.keys(cpValuesData)[0];
+  await expect(async () => {
+    const res = await apiContext.get(
+      `/api/v1/search/query?q=fullyQualifiedName:"${dashboard.entityResponseData.fullyQualifiedName}"&index=dashboard_search_index`
+    );
+    const data = await res.json();
+    expect(data.hits.hits.length).toBe(1);
+    const source = data.hits.hits[0]._source;
+    expect(source.extension).toBeDefined();
+    expect(source.extension[cpName]).toBeDefined();
+  }).toPass({ timeout: 20000 });
+
   await afterAction();
 };
 
